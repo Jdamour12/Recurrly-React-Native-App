@@ -41,10 +41,10 @@ const SubscriptionCard = ({name, price, currency, icon, billing, status, color, 
                         <View className="sub-row">
                             <View className="sub-row-copy">
                                 <Text className="sub-label">
-                                    Category:
+                                    {category?.trim() ? "Category:" : "Plan:"}
                                 </Text>
                                 <Text numberOfLines={1} ellipsizeMode="tail" className="sub-value">
-                                    {category ?.trim() || plan?.trim()}
+                                    {category?.trim() || plan?.trim() || "Not provided"}
                                 </Text>
                             </View>
                         </View>
@@ -54,7 +54,7 @@ const SubscriptionCard = ({name, price, currency, icon, billing, status, color, 
                                     Started:
                                 </Text>
                                 <Text numberOfLines={1} ellipsizeMode="tail" className="sub-value">
-                                    {startDate ? formatSubscriptionDateTime(startDate) : ""}
+                                    {formatSubscriptionDateTime(startDate)}
                                 </Text>
                             </View>
                         </View>
@@ -64,7 +64,7 @@ const SubscriptionCard = ({name, price, currency, icon, billing, status, color, 
                                     Renewal Date:
                                 </Text>
                                 <Text numberOfLines={1} ellipsizeMode="tail" className="sub-value">
-                                    {renewalDate ? formatSubscriptionDateTime(renewalDate) : ""}
+                                    {formatSubscriptionDateTime(renewalDate)}
                                 </Text>
                             </View>
                         </View>
@@ -74,7 +74,7 @@ const SubscriptionCard = ({name, price, currency, icon, billing, status, color, 
                                     Status:
                                 </Text>
                                 <Text numberOfLines={1} ellipsizeMode="tail" className="sub-value">
-                                    {status ? formatStatusLabel(status) : ""}
+                                    {formatStatusLabel(status)}
                                 </Text>
                             </View>
                         </View>
