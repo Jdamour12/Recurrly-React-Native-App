@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text} from "react-native";
+import {Text} from "react-native";
 import { styled } from "nativewind";
 import {SafeAreaView as RNSafeAreaView} from "react-native-safe-area-context";
 
