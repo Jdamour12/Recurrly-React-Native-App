@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, Text, View } from 'react-native';
 import { styled } from 'nativewind';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useClerk, useUser } from '@clerk/expo';
@@ -9,12 +9,27 @@ const SafeAreaView = styled(RNSafeAreaView);
 const Settings = () => {
   const { signOut } = useClerk();
   const { user } = useUser();
+  const [isSigningOut, setIsSigningOut] = React.useState(false);
 
   const displayName = user?.firstName
     ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}`
     : user?.emailAddresses?.[0]?.emailAddress || 'User';
 
   const displayEmail = user?.emailAddresses?.[0]?.emailAddress || '';
+
+  const onSignOut = async () => {
+    if (isSigningOut) return;
+
+    setIsSigningOut(true);
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Failed to sign out:', error);
+      Alert.alert('Sign out failed', 'Please try again.');
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-background p-5">
@@ -168,21 +183,39 @@ const Settings = () => {
           justifyContent: 'center',
           paddingVertical: 16,
           borderRadius: 16,
-          backgroundColor: pressed ? 'rgba(220, 38, 38, 0.15)' : 'rgba(220, 38, 38, 0.08)',
+          backgroundColor:
+            pressed && !isSigningOut ? 'rgba(220, 38, 38, 0.15)' : 'rgba(220, 38, 38, 0.08)',
           borderWidth: 1,
-          borderColor: 'rgba(220, 38, 38, 0.2)',
+          borderColor: isSigningOut ? 'rgba(220, 38, 38, 0.3)' : 'rgba(220, 38, 38, 0.2)',
+          opacity: isSigningOut ? 0.7 : 1,
         })}
-        onPress={() => signOut()}
+        onPress={onSignOut}
+        disabled={isSigningOut}
       >
-        <Text
-          style={{
-            fontFamily: 'sans-bold',
-            fontSize: 16,
-            color: '#dc2626',
-          }}
-        >
-          Sign out
-        </Text>
+        {isSigningOut ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <ActivityIndicator color="#dc2626" />
+            <Text
+              style={{
+                fontFamily: 'sans-bold',
+                fontSize: 16,
+                color: '#dc2626',
+              }}
+            >
+              Signing out...
+            </Text>
+          </View>
+        ) : (
+          <Text
+            style={{
+              fontFamily: 'sans-bold',
+              fontSize: 16,
+              color: '#dc2626',
+            }}
+          >
+            Sign out
+          </Text>
+        )}
       </Pressable>
     </SafeAreaView>
   );

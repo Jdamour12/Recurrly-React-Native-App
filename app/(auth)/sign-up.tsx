@@ -25,6 +25,8 @@ export default function SignUp() {
   const [emailAddress, setEmailAddress] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [code, setCode] = React.useState('');
+  const [isResendingCode, setIsResendingCode] = React.useState(false);
+  const [resendErrorMessage, setResendErrorMessage] = React.useState('');
 
   const handleSubmit = async () => {
     const { error } = await signUp.password({
@@ -56,6 +58,27 @@ export default function SignUp() {
       });
     } else {
       console.error('Sign-up attempt not complete:', signUp);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (fetchStatus === 'fetching' || isResendingCode) return;
+
+    setIsResendingCode(true);
+    setResendErrorMessage('');
+
+    try {
+      const resendResult = await signUp.verifications.sendEmailCode();
+      const resendError = (resendResult as { error?: unknown } | undefined)?.error;
+      if (resendError) {
+        console.error(JSON.stringify(resendError, null, 2));
+        setResendErrorMessage('Could not resend verification code. Please try again.');
+      }
+    } catch (error) {
+      console.error('Failed to resend verification code:', error);
+      setResendErrorMessage('Could not resend verification code. Please try again.');
+    } finally {
+      setIsResendingCode(false);
     }
   };
 
@@ -131,11 +154,23 @@ export default function SignUp() {
                   </Pressable>
 
                   <Pressable
-                    className="auth-secondary-button"
-                    onPress={() => signUp.verifications.sendEmailCode()}
+                    className={`auth-secondary-button${
+                      fetchStatus === 'fetching' || isResendingCode
+                        ? ' auth-button-disabled'
+                        : ''
+                    }`}
+                    onPress={handleResendCode}
+                    disabled={fetchStatus === 'fetching' || isResendingCode}
                   >
-                    <Text className="auth-secondary-button-text">I need a new code</Text>
+                    {fetchStatus === 'fetching' || isResendingCode ? (
+                      <ActivityIndicator color="#081126" />
+                    ) : (
+                      <Text className="auth-secondary-button-text">I need a new code</Text>
+                    )}
                   </Pressable>
+                  {resendErrorMessage ? (
+                    <Text className="auth-error">{resendErrorMessage}</Text>
+                  ) : null}
                 </View>
               </View>
             </View>

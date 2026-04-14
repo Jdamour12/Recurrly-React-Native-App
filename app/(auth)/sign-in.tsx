@@ -25,6 +25,12 @@ export default function SignIn() {
   const [emailAddress, setEmailAddress] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [code, setCode] = React.useState('');
+  const [verifyErrorMessage, setVerifyErrorMessage] = React.useState('');
+  const [twoFactorRequired, setTwoFactorRequired] = React.useState(false);
+  const [twoFactorCode, setTwoFactorCode] = React.useState('');
+  const [twoFactorError, setTwoFactorError] = React.useState('');
+  const [isSubmittingSecondFactor, setIsSubmittingSecondFactor] =
+    React.useState(false);
 
   const handleSubmit = async () => {
     if (!emailAddress || !password) return;
@@ -41,17 +47,29 @@ export default function SignIn() {
 
     if (signIn.status === 'complete') {
       await signIn.finalize({
-        navigate: ({ session, decorateUrl }) => {
+        navigate: ({ session }) => {
           if (session?.currentTask) {
-            console.log(session?.currentTask);
+            console.log(session.currentTask);
             return;
           }
-          const url = decorateUrl('/');
-          router.replace(url as Href);
+          router.replace('/' as Href);
         },
       });
     } else if (signIn.status === 'needs_second_factor') {
-      // Handle 2FA if needed
+      setTwoFactorRequired(true);
+      setTwoFactorError('');
+      const emailFactor = signIn.supportedSecondFactors.find(
+        (factor: any) => factor.strategy === 'email_code',
+      );
+      const phoneFactor = signIn.supportedSecondFactors.find(
+        (factor: any) => factor.strategy === 'phone_code',
+      );
+      if (emailFactor) {
+        await signIn.mfa.sendEmailCode();
+      } else if (phoneFactor) {
+        await signIn.mfa.sendPhoneCode();
+      }
+      return;
     } else if (signIn.status === 'needs_client_trust') {
       const emailCodeFactor = signIn.supportedSecondFactors.find(
         (factor: any) => factor.strategy === 'email_code',
@@ -64,22 +82,109 @@ export default function SignIn() {
     }
   };
 
-  const handleVerify = async () => {
-    await signIn.mfa.verifyEmailCode({ code });
+  const submitSecondFactor = async () => {
+    const normalizedCode = twoFactorCode.trim();
+
+    if (!normalizedCode) {
+      setTwoFactorError('Enter your authentication code to continue.');
+      return;
+    }
+
+    const selectedSecondFactor = signIn.supportedSecondFactors.find(
+      (factor: any) =>
+        factor.strategy === 'totp' ||
+        factor.strategy === 'email_code' ||
+        factor.strategy === 'phone_code' ||
+        factor.strategy === 'backup_code',
+    );
+
+    if (!selectedSecondFactor) {
+      setTwoFactorError(
+        'Two-factor authentication is required, but no supported factor is available in this app yet.',
+      );
+      return;
+    }
+
+    setIsSubmittingSecondFactor(true);
+    setTwoFactorError('');
+    let verificationError: unknown = null;
+
+    if (selectedSecondFactor.strategy === 'totp') {
+      const { error } = await signIn.mfa.verifyTOTP({ code: normalizedCode });
+      verificationError = error;
+    } else if (selectedSecondFactor.strategy === 'email_code') {
+      const { error } = await signIn.mfa.verifyEmailCode({ code: normalizedCode });
+      verificationError = error;
+    } else if (selectedSecondFactor.strategy === 'phone_code') {
+      const { error } = await signIn.mfa.verifyPhoneCode({ code: normalizedCode });
+      verificationError = error;
+    } else if (selectedSecondFactor.strategy === 'backup_code') {
+      const { error } = await signIn.mfa.verifyBackupCode({ code: normalizedCode });
+      verificationError = error;
+    } else {
+      setTwoFactorError(
+        'TODO: Second-factor strategy not implemented in this screen yet.',
+      );
+      setIsSubmittingSecondFactor(false);
+      return;
+    }
+
+    if (verificationError) {
+      setTwoFactorError('Invalid second-factor code. Please try again.');
+      setIsSubmittingSecondFactor(false);
+      return;
+    }
 
     if (signIn.status === 'complete') {
       await signIn.finalize({
-        navigate: ({ session, decorateUrl }) => {
+        navigate: ({ session }) => {
           if (session?.currentTask) {
-            console.log(session?.currentTask);
+            console.log(session.currentTask);
             return;
           }
-          const url = decorateUrl('/');
-          router.replace(url as Href);
+          router.replace('/' as Href);
         },
       });
+      setTwoFactorRequired(false);
+      setTwoFactorCode('');
     } else {
-      console.error('Sign-in attempt not complete:', signIn);
+      setTwoFactorError('Second-factor verification is not complete yet.');
+    }
+
+    setIsSubmittingSecondFactor(false);
+  };
+
+  const handleVerify = async () => {
+    setVerifyErrorMessage('');
+
+    try {
+      const { error: verifyError } = await signIn.mfa.verifyEmailCode({ code });
+      if (verifyError) {
+        setVerifyErrorMessage('Invalid verification code. Please try again.');
+        return;
+      }
+
+      if (signIn.status !== 'complete') {
+        setVerifyErrorMessage('Verification is not complete yet. Please try again.');
+        return;
+      }
+
+      const { error: finalizeError } = await signIn.finalize({
+        navigate: ({ session }) => {
+          if (session?.currentTask) {
+            console.log(session.currentTask);
+            return;
+          }
+          router.replace('/' as Href);
+        },
+      });
+
+      if (finalizeError) {
+        setVerifyErrorMessage('Could not finalize sign in. Please try again.');
+      }
+    } catch (error) {
+      console.error('Failed to verify email code in handleVerify:', error);
+      setVerifyErrorMessage('Something went wrong while verifying your code.');
     }
   };
 
@@ -125,13 +230,19 @@ export default function SignIn() {
                       value={code}
                       placeholder="Enter code"
                       placeholderTextColor="rgba(0,0,0,0.35)"
-                      onChangeText={(c) => setCode(c)}
+                      onChangeText={(c) => {
+                        setCode(c);
+                        setVerifyErrorMessage('');
+                      }}
                       keyboardType="number-pad"
                       autoFocus
                     />
                     {errors.fields.code && (
                       <Text className="auth-error">{errors.fields.code.message}</Text>
                     )}
+                    {verifyErrorMessage ? (
+                      <Text className="auth-error">{verifyErrorMessage}</Text>
+                    ) : null}
                   </View>
 
                   <Pressable
@@ -156,6 +267,96 @@ export default function SignIn() {
                   <Pressable
                     className="auth-secondary-button"
                     onPress={() => signIn.reset()}
+                  >
+                    <Text className="auth-secondary-button-text">Start over</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
+
+  if (twoFactorRequired || signIn.status === 'needs_second_factor') {
+    return (
+      <SafeAreaView className="auth-safe-area">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          className="auth-screen"
+        >
+          <ScrollView
+            className="auth-scroll"
+            contentContainerStyle={{ flexGrow: 1 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View className="auth-content">
+              <View className="auth-brand-block">
+                <View className="auth-logo-wrap">
+                  <View className="auth-logo-mark">
+                    <Text className="auth-logo-mark-text">R</Text>
+                  </View>
+                  <View>
+                    <Text className="auth-wordmark">Recurly</Text>
+                    <Text className="auth-wordmark-sub">SMART BILLING</Text>
+                  </View>
+                </View>
+
+                <Text className="auth-title">Two-factor authentication</Text>
+                <Text className="auth-subtitle">
+                  Enter your authenticator code to complete sign in.
+                </Text>
+              </View>
+
+              <View className="auth-card">
+                <View className="auth-form">
+                  <View className="auth-field">
+                    <Text className="auth-label">Authentication code</Text>
+                    <TextInput
+                      className="auth-input"
+                      value={twoFactorCode}
+                      placeholder="Enter 2FA code"
+                      placeholderTextColor="rgba(0,0,0,0.35)"
+                      onChangeText={(c) => setTwoFactorCode(c)}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      autoFocus
+                    />
+                  </View>
+
+                  {twoFactorError ? (
+                    <Text className="auth-error">{twoFactorError}</Text>
+                  ) : (
+                    <Text className="auth-subtitle">
+                      TODO: Add dedicated UI for selecting non-code factors if required.
+                    </Text>
+                  )}
+
+                  <Pressable
+                    className={`auth-button${
+                      !twoFactorCode || isSubmittingSecondFactor
+                        ? ' auth-button-disabled'
+                        : ''
+                    }`}
+                    onPress={submitSecondFactor}
+                    disabled={!twoFactorCode || isSubmittingSecondFactor}
+                  >
+                    {isSubmittingSecondFactor ? (
+                      <ActivityIndicator color="#081126" />
+                    ) : (
+                      <Text className="auth-button-text">Verify</Text>
+                    )}
+                  </Pressable>
+
+                  <Pressable
+                    className="auth-secondary-button"
+                    onPress={() => {
+                      setTwoFactorRequired(false);
+                      setTwoFactorCode('');
+                      setTwoFactorError('');
+                      signIn.reset();
+                    }}
                   >
                     <Text className="auth-secondary-button-text">Start over</Text>
                   </Pressable>
