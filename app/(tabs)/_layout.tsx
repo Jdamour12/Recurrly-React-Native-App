@@ -5,6 +5,7 @@ import { Image, View } from "react-native";
 import cx from "clsx";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@clerk/expo";
+import { SubscriptionProvider } from "@/lib/subscription-context";
 
 const tabBar = components.tabBar;
 const TabLayout = () => {
@@ -29,6 +30,7 @@ const TabLayout = () => {
     );
   };
   return (
+    <SubscriptionProvider>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -64,6 +66,7 @@ const TabLayout = () => {
         />
       ))}
     </Tabs>
+    </SubscriptionProvider>
   );
 };
 

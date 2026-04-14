@@ -1,9 +1,8 @@
 import "@/global.css"
-import {FlatList, Image, Text, View} from "react-native";
-import {Link} from "expo-router";
+import {FlatList, Image, Pressable, Text, View} from "react-native";
 import { styled } from "nativewind";
 import {SafeAreaView as RNSafeAreaView} from "react-native-safe-area-context";
-import {HOME_BALANCE, HOME_SUBSCRIPTIONS, UPCOMING_SUBSCRIPTIONS} from "@/constants/data";
+import {HOME_BALANCE, UPCOMING_SUBSCRIPTIONS} from "@/constants/data";
 import {icons} from "@/constants/icons";
 import images from "@/constants/images";
 import {formatCurrency} from "@/lib/utils";
@@ -11,14 +10,18 @@ import dayjs from "dayjs";
 import ListHeading from "@/components/ListHeading";
 import UpcomingSubscriptionCard from "@/components/UpcomingSubscriptionCard";
 import SubscriptionCard from "@/components/SubscriptionCard";
+import CreateSubscriptionModal from "@/components/CreateSubscriptionModal";
 import {useState} from "react";
 import { useUser } from '@clerk/expo';
 import { usePostHog } from 'posthog-react-native';
+import { useSubscriptions } from "@/lib/subscription-context";
 
 const SafeAreaView = styled(RNSafeAreaView);
 
 export default function App() {
     const [expandedSubscriptionId, setExpandedSubscriptionId] = useState<string | null>(null)
+    const [modalVisible, setModalVisible] = useState(false)
+    const { subscriptions, addSubscription } = useSubscriptions();
     const { user } = useUser();
     const posthog = usePostHog();
 
@@ -26,6 +29,16 @@ export default function App() {
     const displayName = user?.firstName
         ? `${user.firstName}`
         : user?.emailAddresses?.[0]?.emailAddress?.split('@')[0] || 'User';
+
+    const handleCreateSubscription = (newSub: Subscription) => {
+        addSubscription(newSub);
+        posthog.capture('subscription created', {
+            subscription_name: newSub.name,
+            subscription_category: newSub.category ?? null,
+            subscription_price: newSub.price,
+            subscription_billing: newSub.billing ?? null,
+        });
+    };
 
     return (
         <SafeAreaView className="flex-1 bg-background p-5">
@@ -42,7 +55,9 @@ export default function App() {
                                         />
                                         <Text className="home-user-name">{displayName}</Text>
                                     </View>
-                                    <Image source={icons.add} className="home-add-icon" />
+                                    <Pressable onPress={() => setModalVisible(true)}>
+                                        <Image source={icons.add} className="home-add-icon" />
+                                    </Pressable>
                                 </View>
 
                                 <View className="home-balance-card">
@@ -79,7 +94,7 @@ export default function App() {
                             </>
                         )
                     }
-                    data={HOME_SUBSCRIPTIONS}
+                    data={subscriptions}
                     keyExtractor={(item) => item.id}
                     renderItem={({item}) => (
                         <SubscriptionCard
@@ -103,6 +118,12 @@ export default function App() {
                     showsVerticalScrollIndicator={false}
                     ListEmptyComponent={<Text className='home-empty-state'>No Subscriptions Yet.</Text> }
                     contentContainerClassName="pb-20"
+                />
+
+                <CreateSubscriptionModal
+                    visible={modalVisible}
+                    onClose={() => setModalVisible(false)}
+                    onCreate={handleCreateSubscription}
                 />
         </SafeAreaView>
     );
