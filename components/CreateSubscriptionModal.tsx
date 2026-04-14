@@ -12,6 +12,7 @@ import {
 import cx from "clsx";
 import dayjs from "dayjs";
 import { getSubscriptionIcon } from "@/lib/get-logo";
+import {posthog} from "@/src/config/posthog";
 
 // ── category → color mapping ────────────────────────────────────────
 const CATEGORY_COLORS: Record<string, string> = {
@@ -96,6 +97,12 @@ export default function CreateSubscriptionModal({
     };
 
     onCreate(newSub);
+    posthog.capture('created subscription', {
+      subscription_name: name.trim(),
+      subscription_price: parseFloat(price),
+      subscription_frequency: frequency,
+      subscription_category: category || "Other",
+    })
     resetForm();
     onClose();
   };
