@@ -1,15 +1,25 @@
-import {Tabs} from "expo-router";
+import {Tabs, Redirect} from "expo-router";
 import {tabs} from "@/constants/data";
 import {colors, components} from "@/constants/theme";
 import {View} from "react-native";
 import clsx from "clsx";
 import {Image} from "react-native";
 import {useSafeAreaInsets} from "react-native-safe-area-context";
+import {useAuth} from "@clerk/expo";
 
 const tabBar = components.tabBar
 const TabLayout = () => {
-    const insects = useSafeAreaInsets();
+    const insets = useSafeAreaInsets();
+    const { isSignedIn, isLoaded } = useAuth();
+
+    if (!isLoaded) return null;
+
+    if (!isSignedIn) {
+        return <Redirect href="/(auth)/sign-in" />;
+    }
+
     type TabIconProps = { focused: boolean; icon: number };
+
     const TabIcon = ({focused, icon}: TabIconProps) => {
         return (
             <View className="tabs-icon">
@@ -26,7 +36,7 @@ const TabLayout = () => {
                 tabBarShowLabel: false,
                 tabBarStyle: {
                     position: 'absolute',
-                    bottom: Math.max(insects.bottom, tabBar.horizontalInset),
+                    bottom: Math.max(insets.bottom, tabBar.horizontalInset),
                     height: tabBar.height,
                     marginHorizontal: tabBar.horizontalInset,
                     borderRadius: tabBar.radius,
