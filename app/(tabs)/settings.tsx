@@ -10,12 +10,14 @@ const Settings = () => {
   const { signOut } = useClerk();
   const { user } = useUser();
   const [isSigningOut, setIsSigningOut] = React.useState(false);
+  const primaryEmail = user?.emailAddresses?.[0]?.emailAddress || '';
+  const emailLocalPart = primaryEmail.split('@')[0] || '';
 
   const displayName = user?.firstName
     ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}`
-    : user?.emailAddresses?.[0]?.emailAddress || 'User';
+    : emailLocalPart || 'User';
 
-  const displayEmail = user?.emailAddresses?.[0]?.emailAddress || '';
+  const displayEmail = primaryEmail;
 
   const onSignOut = async () => {
     if (isSigningOut) return;
@@ -91,17 +93,17 @@ const Settings = () => {
       {/* Settings options */}
       <View style={{ gap: 12 }}>
         {/* Account */}
-        <Pressable
-          style={({ pressed }) => ({
+        <View
+          style={{
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: 16,
-            backgroundColor: pressed ? '#f6eecf' : '#fff8e7',
+            backgroundColor: '#fff8e7',
             borderRadius: 16,
             borderWidth: 1,
             borderColor: 'rgba(0,0,0,0.1)',
-          })}
+          }}
         >
           <Text style={{ fontFamily: 'sans-semibold', fontSize: 16, color: '#081126' }}>
             Account
@@ -109,20 +111,20 @@ const Settings = () => {
           <Text style={{ fontFamily: 'sans-medium', fontSize: 18, color: 'rgba(0,0,0,0.3)' }}>
             ›
           </Text>
-        </Pressable>
+        </View>
 
         {/* Notifications */}
-        <Pressable
-          style={({ pressed }) => ({
+        <View
+          style={{
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: 16,
-            backgroundColor: pressed ? '#f6eecf' : '#fff8e7',
+            backgroundColor: '#fff8e7',
             borderRadius: 16,
             borderWidth: 1,
             borderColor: 'rgba(0,0,0,0.1)',
-          })}
+          }}
         >
           <Text style={{ fontFamily: 'sans-semibold', fontSize: 16, color: '#081126' }}>
             Notifications
@@ -130,20 +132,20 @@ const Settings = () => {
           <Text style={{ fontFamily: 'sans-medium', fontSize: 18, color: 'rgba(0,0,0,0.3)' }}>
             ›
           </Text>
-        </Pressable>
+        </View>
 
         {/* Appearance */}
-        <Pressable
-          style={({ pressed }) => ({
+        <View
+          style={{
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: 16,
-            backgroundColor: pressed ? '#f6eecf' : '#fff8e7',
+            backgroundColor: '#fff8e7',
             borderRadius: 16,
             borderWidth: 1,
             borderColor: 'rgba(0,0,0,0.1)',
-          })}
+          }}
         >
           <Text style={{ fontFamily: 'sans-semibold', fontSize: 16, color: '#081126' }}>
             Appearance
@@ -151,20 +153,20 @@ const Settings = () => {
           <Text style={{ fontFamily: 'sans-medium', fontSize: 18, color: 'rgba(0,0,0,0.3)' }}>
             ›
           </Text>
-        </Pressable>
+        </View>
 
         {/* Privacy */}
-        <Pressable
-          style={({ pressed }) => ({
+        <View
+          style={{
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: 16,
-            backgroundColor: pressed ? '#f6eecf' : '#fff8e7',
+            backgroundColor: '#fff8e7',
             borderRadius: 16,
             borderWidth: 1,
             borderColor: 'rgba(0,0,0,0.1)',
-          })}
+          }}
         >
           <Text style={{ fontFamily: 'sans-semibold', fontSize: 16, color: '#081126' }}>
             Privacy
@@ -172,7 +174,7 @@ const Settings = () => {
           <Text style={{ fontFamily: 'sans-medium', fontSize: 18, color: 'rgba(0,0,0,0.3)' }}>
             ›
           </Text>
-        </Pressable>
+        </View>
       </View>
 
       {/* Sign out button */}
