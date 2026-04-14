@@ -3,12 +3,14 @@ import { ActivityIndicator, Alert, Image, Pressable, Text, View } from 'react-na
 import { styled } from 'nativewind';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useClerk, useUser } from '@clerk/expo';
+import { usePostHog } from 'posthog-react-native';
 
 const SafeAreaView = styled(RNSafeAreaView);
 
 const Settings = () => {
   const { signOut } = useClerk();
   const { user } = useUser();
+  const posthog = usePostHog();
   const [isSigningOut, setIsSigningOut] = React.useState(false);
   const primaryEmail = user?.emailAddresses?.[0]?.emailAddress || '';
   const emailLocalPart = primaryEmail.split('@')[0] || '';
@@ -24,6 +26,8 @@ const Settings = () => {
 
     setIsSigningOut(true);
     try {
+      posthog.capture('user signed out');
+      posthog.reset();
       await signOut();
     } catch (error) {
       console.error('Failed to sign out:', error);

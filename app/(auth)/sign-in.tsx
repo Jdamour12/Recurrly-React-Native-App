@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { styled } from 'nativewind';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+import { usePostHog } from 'posthog-react-native';
 
 const SafeAreaView = styled(RNSafeAreaView);
 
@@ -21,6 +22,7 @@ export default function SignIn() {
   const { signIn, errors, fetchStatus } = useSignIn();
   const { isSignedIn } = useAuth();
   const router = useRouter();
+  const posthog = usePostHog();
 
   const [emailAddress, setEmailAddress] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -42,10 +44,13 @@ export default function SignIn() {
 
     if (error) {
       console.error(JSON.stringify(error, null, 2));
+      posthog.capture('user sign in failed', { method: 'password', error_code: (error as any)?.code });
       return;
     }
 
     if (signIn.status === 'complete') {
+      posthog.identify(emailAddress, { email: emailAddress });
+      posthog.capture('user signed in', { method: 'password' });
       await signIn.finalize({
         navigate: ({ session }) => {
           if (session?.currentTask) {
@@ -136,6 +141,8 @@ export default function SignIn() {
     }
 
     if (signIn.status === 'complete') {
+      posthog.identify(emailAddress, { email: emailAddress });
+      posthog.capture('user signed in', { method: '2fa', factor: selectedSecondFactor.strategy });
       await signIn.finalize({
         navigate: ({ session }) => {
           if (session?.currentTask) {

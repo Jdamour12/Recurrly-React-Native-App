@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { styled } from 'nativewind';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+import { usePostHog } from 'posthog-react-native';
 
 const SafeAreaView = styled(RNSafeAreaView);
 
@@ -21,6 +22,7 @@ export default function SignUp() {
   const { signUp, errors, fetchStatus } = useSignUp();
   const { isSignedIn } = useAuth();
   const router = useRouter();
+  const posthog = usePostHog();
 
   const [emailAddress, setEmailAddress] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -46,6 +48,8 @@ export default function SignUp() {
       code,
     });
     if (signUp.status === 'complete') {
+      posthog.identify(emailAddress, { email: emailAddress });
+      posthog.capture('user signed up', { method: 'email_password' });
       await signUp.finalize({
         navigate: ({ session, decorateUrl }) => {
           if (session?.currentTask) {
